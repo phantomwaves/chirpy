@@ -1,0 +1,15 @@
+POST http://localhost:8080/api/validate_chirp HTTP/1.1
+content-type: application/json
+
+{
+    "body": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus vestibulum purus non facilisis viverra. Nam volutpat est sit amet lorem porttitor lacinia. Donec imperdiet lobortis lectus, vel finibus eros laoreet id. Suspendisse non eleifend ligula, vitae lacinia quam. Vestibulum fringilla lorem laoreet convallis placerat. Nulla lacus justo, fermentum non lacinia nec, aliquam vel tortor. Cras et aliquet ante, non iaculis orci. Vivamus pharetra, augue eu bibendum tincidunt, est risus dictum mi, in vulputate nisi odio non tellus. Praesent lorem lorem, consequat a pulvinar eu, tristique quis ex. "
+
+}
+
+POST http://localhost:8080/api/validate_chirp HTTP/1.1
+content-type: application/json
+
+{
+    "body": "hello world"
+
+}

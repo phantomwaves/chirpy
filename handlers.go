@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -9,6 +11,11 @@ import (
 
 type apiConfig struct {
 	fileServerHits int
+}
+
+type returnVals struct {
+	Error string `json:"error"`
+	Valid bool   `json:"valid"`
 }
 
 func getHTMLFromFile(filepath string, replace map[string]string) []byte {
@@ -61,8 +68,67 @@ func (cfg *apiConfig) writeHitsHandler(w http.ResponseWriter, req *http.Request)
 	w.Write(getHTMLFromFile("metrics.html",
 		map[string]string{"{XX}": fmt.Sprint(cfg.fileServerHits)}))
 
-	// w.Write([]byte(fmt.Sprintf("Hits: %v", cfg.fileServerHits)))
 }
+
+func (cfg *apiConfig) validateChirp(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	type parameters struct {
+		Body string `json:"body"`
+	}
+
+	decoder := json.NewDecoder(req.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		log.Printf("Error decoding parameters: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if len(params.Body) > 140 {
+		log.Printf("Chirp is too long.")
+		respBody := returnVals{
+			Error: "Chirp is too long",
+			Valid: false,
+		}
+		dat, err := json.Marshal(respBody)
+		if err != nil {
+			jsonMarshalError(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(dat)
+	}
+
+	respBody := returnVals{
+		Valid: true,
+	}
+	dat, err := json.Marshal(respBody)
+	if err != nil {
+		jsonMarshalError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(dat)
+
+}
+
+func jsonMarshalError(w http.ResponseWriter, err error) {
+	log.Printf("Error marshalling JSON: %s", err)
+	w.WriteHeader(http.StatusInternalServerError)
+	respBody := returnVals{
+		Error: "Something went wrong",
+		Valid: false,
+	}
+	dat, _ := json.Marshal(respBody)
+	w.Write(dat)
+	return
+}
+
 func sendHealthResponse(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodGet {
 		w.WriteHeader(http.StatusBadRequest)
