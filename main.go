@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-const port = "8080"
+const port string = "8080"
 
 func main() {
 	mux := http.NewServeMux()
@@ -14,7 +14,7 @@ func main() {
 
 	mux.Handle("/app/*", http.StripPrefix("/app/", apiCfg.middlewareGetHits(fs)))
 	mux.HandleFunc("/api/healthz", sendHealthResponse)
-	mux.HandleFunc("/api/metrics", apiCfg.writeHitsHandler)
+	mux.HandleFunc("/admin/metrics", apiCfg.writeHitsHandler)
 	mux.HandleFunc("/api/reset", apiCfg.resetHitsHandler)
 
 	server := &http.Server{
