@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,128 +12,122 @@ type apiConfig struct {
 	fileServerHits int
 }
 
+type parameters struct {
+	Body string `json:"body"`
+}
+
 type returnVals struct {
 	Error string `json:"error"`
 	Valid bool   `json:"valid"`
 }
 
-func getHTMLFromFile(filepath string, replace map[string]string) []byte {
+func getHTMLFromFile(filepath string, replace map[string]string) ([]byte, error) {
 	contents, err := os.ReadFile(filepath)
 	if err != nil {
-		fmt.Println("Error: file not found")
-		return []byte("")
+		log.Print("file not found")
+		return nil, err
 	}
 	if len(replace) == 0 {
-		return contents
+		return contents, nil
 	}
 	for k, v := range replace {
 		if strings.Contains(string(contents), k) {
 			contents = []byte(strings.ReplaceAll(string(contents), k, v))
 		}
 	}
-	return contents
+	return contents, nil
 
 }
 
 func (cfg *apiConfig) middlewareGetHits(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if req.Method != http.MethodGet {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
 		cfg.fileServerHits++
-
 		next.ServeHTTP(w, req)
 	})
 }
 
-func (cfg *apiConfig) resetHitsHandler(w http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodGet {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+func (cfg *apiConfig) resetHitsHandler(w http.ResponseWriter, r *http.Request) {
 	cfg.fileServerHits = 0
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Counter reset"))
-}
-
-func (cfg *apiConfig) writeHitsHandler(w http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodGet {
-		w.WriteHeader(http.StatusBadRequest)
+	_, err := w.Write([]byte("Counter reset"))
+	if err != nil {
 		return
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write(getHTMLFromFile("metrics.html",
-		map[string]string{"{XX}": fmt.Sprint(cfg.fileServerHits)}))
+	return
+}
 
+func (cfg *apiConfig) writeHitsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	body, err := getHTMLFromFile("metrics.html", map[string]string{"{XX}": fmt.Sprint(cfg.fileServerHits)})
+	if err != nil {
+		log.Println("error reading html file")
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(body)
+	if err != nil {
+		log.Println("error writing response body")
+		return
+	}
+	return
 }
 
 func (cfg *apiConfig) validateChirp(w http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodPost {
+	params, err := parseJsonRequest(req)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	type parameters struct {
-		Body string `json:"body"`
-	}
 
-	decoder := json.NewDecoder(req.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
-	w.Header().Set("Content-Type", "application/json")
-	if err != nil {
-		log.Printf("Error decoding parameters: %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
 	if len(params.Body) > 140 {
 		log.Printf("Chirp is too long.")
-		respBody := returnVals{
+
+		respBodyTooLong := returnVals{
 			Error: "Chirp is too long",
 			Valid: false,
 		}
-		dat, err := json.Marshal(respBody)
+
+		dat, err := writeJsonResponse(respBodyTooLong)
 		if err != nil {
 			jsonMarshalError(w, err)
 			return
 		}
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write(dat)
+		_, err = w.Write(dat)
+		if err != nil {
+			return
+		}
+
+		return
 	}
 
-	respBody := returnVals{
+	w.Header().Set("Content-Type", "application/json")
+
+	respBodyValid := returnVals{
 		Valid: true,
 	}
-	dat, err := json.Marshal(respBody)
+
+	dat, err := writeJsonResponse(respBodyValid)
 	if err != nil {
 		jsonMarshalError(w, err)
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
-	w.Write(dat)
+	_, err = w.Write(dat)
 
-}
-
-func jsonMarshalError(w http.ResponseWriter, err error) {
-	log.Printf("Error marshalling JSON: %s", err)
-	w.WriteHeader(http.StatusInternalServerError)
-	respBody := returnVals{
-		Error: "Something went wrong",
-		Valid: false,
-	}
-	dat, _ := json.Marshal(respBody)
-	w.Write(dat)
-	return
-}
-
-func sendHealthResponse(w http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodGet {
-		w.WriteHeader(http.StatusBadRequest)
+	if err != nil {
 		return
+
 	}
+}
+
+func sendHealthResponse(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	_, err := w.Write([]byte("OK"))
+	if err != nil {
+		log.Println("error writing response body")
+		return
+	}
+	return
 }
