@@ -1,0 +1,62 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
+)
+
+// Helper function to create a chirp
+func createChirp(t *testing.T, body string, db *DB) {
+	chirp := map[string]string{"body": body}
+	jsonData, err := json.Marshal(chirp)
+	if err != nil {
+		t.Fatalf("Error marshalling json: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/chirps", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+
+	rec := httptest.NewRecorder()
+	cfg := apiConfig{}
+	handler := cfg.postChirpsHandler(db) // assuming db is your initialized DB instance
+	handler.ServeHTTP(rec, req)
+
+	if status := rec.Code; status != http.StatusCreated {
+		t.Errorf("Expected status code %v, got %v", http.StatusCreated, status)
+	}
+
+	// Further checks on response body if needed
+	var respBody map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &respBody)
+	if err != nil {
+		t.Fatalf("Error unmarshalling response: %v", err)
+	}
+
+	if respBody["body"] != body {
+		t.Errorf("Expected body %v, got %v", body, respBody["body"])
+	}
+
+	if _, ok := respBody["id"].(float64); !ok {
+		t.Errorf("Expected id to be a number")
+	}
+}
+
+func TestPostChirp(t *testing.T) {
+	// Start fresh
+	err := os.Remove("database.json")
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatalf("Error removing database file: %v", err)
+	}
+
+	db, err := ensureDB()
+	if err != nil {
+		t.Fatalf("Error initializing database: %v", err)
+	}
+
+	createChirp(t, "Hello, world!", db)
+	createChirp(t, "Another chirp", db)
+}

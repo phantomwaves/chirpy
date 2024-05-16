@@ -12,11 +12,14 @@ func main() {
 	fs := http.FileServer(http.Dir("."))
 	apiCfg := apiConfig{}
 
+	db, _ := ensureDB()
+
 	mux.Handle("/app/*", http.StripPrefix("/app/", apiCfg.middlewareGetHits(fs)))
-	mux.HandleFunc("/api/healthz", sendHealthResponse)
-	mux.HandleFunc("/admin/metrics", apiCfg.writeHitsHandler)
+	mux.HandleFunc("GET /api/healthz", sendHealthResponse)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.writeHitsHandler)
 	mux.HandleFunc("GET /api/reset", apiCfg.resetHitsHandler)
-	mux.HandleFunc("/api/validate_chirp", apiCfg.validateChirp)
+	mux.HandleFunc("POST /api/chirps", apiCfg.postChirpsHandler(db))
+	mux.HandleFunc("GET /api/chirps", apiCfg.getChirpsHandler(db))
 
 	server := &http.Server{
 		Addr:    "localhost:" + port,

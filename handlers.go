@@ -1,11 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"strings"
 )
 
 type apiConfig struct {
@@ -17,26 +16,9 @@ type parameters struct {
 }
 
 type returnVals struct {
-	Error string `json:"error"`
-	Valid bool   `json:"valid"`
-}
-
-func getHTMLFromFile(filepath string, replace map[string]string) ([]byte, error) {
-	contents, err := os.ReadFile(filepath)
-	if err != nil {
-		log.Print("file not found")
-		return nil, err
-	}
-	if len(replace) == 0 {
-		return contents, nil
-	}
-	for k, v := range replace {
-		if strings.Contains(string(contents), k) {
-			contents = []byte(strings.ReplaceAll(string(contents), k, v))
-		}
-	}
-	return contents, nil
-
+	Error       string `json:"error"`
+	Valid       bool   `json:"valid"`
+	CleanedBody string `json:"cleaned_body"`
 }
 
 func (cfg *apiConfig) middlewareGetHits(next http.Handler) http.Handler {
@@ -72,55 +54,6 @@ func (cfg *apiConfig) writeHitsHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (cfg *apiConfig) validateChirp(w http.ResponseWriter, req *http.Request) {
-	params, err := parseJsonRequest(req)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if len(params.Body) > 140 {
-		log.Printf("Chirp is too long.")
-
-		respBodyTooLong := returnVals{
-			Error: "Chirp is too long",
-			Valid: false,
-		}
-
-		dat, err := writeJsonResponse(respBodyTooLong)
-		if err != nil {
-			jsonMarshalError(w, err)
-			return
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		_, err = w.Write(dat)
-		if err != nil {
-			return
-		}
-
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	respBodyValid := returnVals{
-		Valid: true,
-	}
-
-	dat, err := writeJsonResponse(respBodyValid)
-	if err != nil {
-		jsonMarshalError(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(dat)
-
-	if err != nil {
-		return
-
-	}
-}
-
 func sendHealthResponse(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
@@ -130,4 +63,108 @@ func sendHealthResponse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	return
+}
+
+func (cfg *apiConfig) validateChirp(w http.ResponseWriter, req *http.Request) {
+	params, err := parseJsonRequest(req)
+	if err != nil {
+		log.Println("Error parsing request body")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	respBody := validateChirpLength(params)
+	if !respBody.Valid {
+		dat, err := writeJsonResponse(respBody)
+		if err != nil {
+			jsonMarshalError(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(dat)
+	}
+	respBody.CleanedBody = cleanChirp(params)
+
+	dat, err := writeJsonResponse(respBody)
+	if err != nil {
+		jsonMarshalError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(dat)
+	if err != nil {
+		log.Println("error writing response body")
+		return
+
+	}
+}
+
+func (cfg *apiConfig) getChirpsHandler(db *DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		chirps, err := cfg.getChirpsReq(db)
+		if err != nil {
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(chirps)
+	}
+
+}
+
+func (cfg *apiConfig) getChirpsReq(db *DB) ([]byte, error) {
+	dbs, err := db.readDB()
+	if err != nil {
+		log.Println("Error reading chirps")
+		return nil, err
+	}
+	cArray, err2 := dbs.GetChirps()
+	if err2 != nil {
+		return nil, err2
+	}
+	dat, err := json.Marshal(cArray)
+	if err != nil {
+		log.Println("Error marshalling chirps")
+		return nil, err
+	}
+	return dat, nil
+}
+
+func (cfg *apiConfig) postChirpsHandler(db *DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		params, err := parseJsonRequest(req)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
+		resp := validateChirpLength(params)
+		resp.CleanedBody = cleanChirp(params)
+		if !resp.Valid {
+			http.Error(w, "Chirp is invalid", http.StatusBadRequest)
+			return
+		}
+
+		dbs, err := db.readDB()
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "Could not read database", http.StatusInternalServerError)
+
+		}
+		chirp := dbs.CreateChirp(resp.CleanedBody)
+		dbs.Chirps[chirp.Id] = chirp
+
+		err2 := db.writeDB(dbs)
+
+		if err2 != nil {
+			log.Println(err2)
+			http.Error(w, "Could not write to database", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(chirp) // send the created chirp in response
+	}
 }

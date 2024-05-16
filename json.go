@@ -36,6 +36,5 @@ func jsonMarshalError(w http.ResponseWriter, err error) {
 		Valid: false,
 	}
 	dat, _ := json.Marshal(respBody)
-	w.Write(dat)
-
+	_, _ = w.Write(dat)
 }

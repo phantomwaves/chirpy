@@ -14,10 +14,41 @@
 //
 //}
 
-POST http://localhost:8080/api/reset HTTP/1.1
+#POST http://localhost:8080/api/reset HTTP/1.1
+#content-type: application/json
+#
+#{
+#    "body": "hello world"
+#
+#}
+#POST http://localhost:8080/api/validate_chirp
+#content-type: application/json
+#
+#{
+#    "body": "I had something interesting for breakfast"
+#}
+
+
+//POST http://localhost:8080/api/validate_chirp
+//content-type: application/json
+//
+//{
+//
+//  "body": "I hear Mastodon is better than Chirpy. sharbert I need to migrate",
+//  "extra": "this should be ignored"
+//
+//}
+
+POST http://localhost:8080/api/chirps
 content-type: application/json
 
 {
-    "body": "hello world"
-
+  "body": "I really need a kerfuffle to go to bed sooner, Fornax !"
 }
+
+//#POST http://localhost:8080/api/chirps
+//#content-type: application/json
+//#
+//#{
+//#"body": "What about second breakfast?"
+//#}
