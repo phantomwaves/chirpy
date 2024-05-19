@@ -2,3 +2,5 @@ out
 assets/
 .idea/
 test.http
+database.json
+main_test.gobak

@@ -43,7 +43,7 @@ POST http://localhost:8080/api/chirps
 content-type: application/json
 
 {
-  "body": "I really need a kerfuffle to go to bed sooner, Fornax !"
+  "body": "Dad's a plonker with a chainsaw"
 }
 
 //#POST http://localhost:8080/api/chirps

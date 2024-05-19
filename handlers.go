@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type apiConfig struct {
@@ -130,6 +131,37 @@ func (cfg *apiConfig) getChirpsReq(db *DB) ([]byte, error) {
 		return nil, err
 	}
 	return dat, nil
+}
+
+func (cfg *apiConfig) getChirpByIDHandler(db *DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		chirpID := req.PathValue("ID")
+		id, err := strconv.Atoi(chirpID)
+		if err != nil {
+			log.Println("Error converting chirpID to int")
+			return
+		}
+
+		dbs, err2 := db.readDB()
+		if err2 != nil {
+			log.Println("Error reading DB")
+			return
+		}
+		c, e := dbs.Chirps[id]
+		if e == false {
+			w.WriteHeader(404)
+			log.Println("Chirp not found")
+		}
+
+		dat, err := json.Marshal(c)
+		if err != nil {
+			log.Println("Error marshalling chirp")
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(dat)
+
+	}
 }
 
 func (cfg *apiConfig) postChirpsHandler(db *DB) http.HandlerFunc {
