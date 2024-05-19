@@ -39,16 +39,16 @@
 //
 //}
 
-POST http://localhost:8080/api/chirps
+POST http://localhost:8080/api/users
 content-type: application/json
 
 {
-  "body": "Dad's a plonker with a chainsaw"
+  "email": "elongthrust@hugeego.io"
 }
 
-//#POST http://localhost:8080/api/chirps
-//#content-type: application/json
-//#
-//#{
-//#"body": "What about second breakfast?"
-//#}
+#POST http://localhost:8080/api/chirps
+#content-type: application/json
+#
+#{
+#"body": "What about second breakfast?"
+#}

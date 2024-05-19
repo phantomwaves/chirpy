@@ -8,6 +8,10 @@ import (
 	"sync"
 )
 
+type User struct {
+	Id    int    `json:"id"`
+	Email string `json:"email"`
+}
 type Chirp struct {
 	Id   int    `json:"id"`
 	Body string `json:"body"`
@@ -15,6 +19,7 @@ type Chirp struct {
 
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
+	Users  map[int]User  `json:"users"`
 }
 
 type DB struct {
@@ -23,17 +28,12 @@ type DB struct {
 }
 
 func (dbs *DBStructure) CreateChirp(body string) Chirp {
-	var nextID int
-	if len(dbs.Chirps) > 0 {
-		for id := range dbs.Chirps {
-			if id >= nextID {
-				nextID = id + 1
-			}
-		}
-	} else {
-		nextID = 1
-	}
+	nextID := dbs.nextID("chirp")
 	return Chirp{Body: body, Id: nextID}
+}
+func (dbs *DBStructure) CreateUser(body string) User {
+	nextID := dbs.nextID("user")
+	return User{Email: body, Id: nextID}
 }
 
 func (dbs *DBStructure) GetChirps() ([]Chirp, error) {
@@ -45,7 +45,11 @@ func (dbs *DBStructure) GetChirps() ([]Chirp, error) {
 }
 
 func newDB(path string) (*DB, error) {
-	initialData := `{"chirps": {}}` // Initial JSON structure for an empty 'chirps' map
+	initialData :=
+		`{
+    "chirps": {},
+    "users": {}
+	}` // Initial JSON structure for an empty 'chirps' map
 	err := os.WriteFile(path, []byte(initialData), 0777)
 	if err != nil {
 		return nil, errors.New("could not create DB")
@@ -92,16 +96,45 @@ func (db *DB) readDB() (DBStructure, error) {
 		log.Println("DB path is empty!")
 		return DBStructure{}, errors.New("db path is empty")
 	}
-	chirps, err := os.ReadFile(db.path)
+	data, err := os.ReadFile(db.path)
 	if err != nil {
 		log.Printf("Error reading file: %v\n", err)
 		return DBStructure{}, errors.New("could not read chirps from db")
 	}
 	var dbs DBStructure
-	err = json.Unmarshal(chirps, &dbs)
+	err = json.Unmarshal(data, &dbs)
 	if err != nil {
 		log.Printf("Error unmarshalling chirps: %v\n", err)
 		return DBStructure{}, errors.New("could not decode chirps from db")
 	}
 	return dbs, nil
+}
+
+func (dbs *DBStructure) nextID(x string) int {
+	var nextID int
+	switch x {
+	case "chirp":
+		if len(dbs.Chirps) > 0 {
+			for id := range dbs.Chirps {
+				if id >= nextID {
+					nextID = id + 1
+				}
+			}
+		} else {
+			nextID = 1
+		}
+	case "user":
+		if len(dbs.Users) > 0 {
+			for id := range dbs.Users {
+				if id >= nextID {
+					nextID = id + 1
+				}
+			}
+		} else {
+			nextID = 1
+		}
+
+	}
+
+	return nextID
 }
