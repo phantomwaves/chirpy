@@ -1,13 +1,24 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
+	"os"
 )
 
 const port string = "8080"
 
 func main() {
+	dbg := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+	if *dbg == true {
+		log.Println("Debug mode enabled -- removing database.json")
+		err := os.Remove("database.json")
+		if err != nil {
+			log.Fatalf("Error removing existing database", err)
+		}
+	}
 	mux := http.NewServeMux()
 	fs := http.FileServer(http.Dir("."))
 	apiCfg := apiConfig{}
