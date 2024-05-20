@@ -3,18 +3,27 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"os"
 	"sync"
 )
 
 type User struct {
-	Id    int    `json:"id"`
-	Email string `json:"email"`
+	Id       int    `json:"id"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
+
 type Chirp struct {
 	Id   int    `json:"id"`
 	Body string `json:"body"`
+}
+
+type parameters struct {
+	Body     string `json:"body"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type DBStructure struct {
@@ -31,9 +40,13 @@ func (dbs *DBStructure) CreateChirp(body string) Chirp {
 	nextID := dbs.nextID("chirp")
 	return Chirp{Body: body, Id: nextID}
 }
-func (dbs *DBStructure) CreateUser(body string) User {
+func (dbs *DBStructure) CreateUser(email, password string) User {
 	nextID := dbs.nextID("user")
-	return User{Email: body, Id: nextID}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Error generating password hash: %v", err)
+	}
+	return User{Email: email, Password: string(hashedPassword), Id: nextID}
 }
 
 func (dbs *DBStructure) GetChirps() ([]Chirp, error) {
@@ -137,4 +150,16 @@ func (dbs *DBStructure) nextID(x string) int {
 	}
 
 	return nextID
+}
+
+func (dbs *DBStructure) checkEmail(email string) (int, error) {
+	if email == "" {
+		return 0, errors.New("invalid email")
+	}
+	for _, u := range dbs.Users {
+		if u.Email == email {
+			return u.Id, nil
+		}
+	}
+	return 0, errors.New("email not in use")
 }

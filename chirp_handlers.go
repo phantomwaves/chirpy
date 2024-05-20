@@ -11,11 +11,6 @@ type apiConfig struct {
 	fileServerHits int
 }
 
-type parameters struct {
-	Body  string `json:"body"`
-	Email string `json:"email"`
-}
-
 type returnVals struct {
 	Error       string `json:"error"`
 	Valid       bool   `json:"valid"`

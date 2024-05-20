@@ -38,17 +38,52 @@
 //  "extra": "this should be ignored"
 //
 //}
+###
 
 POST http://localhost:8080/api/users
 content-type: application/json
 
 {
-  "email": "elongthrust@hugeego.io"
+  "email": "elongthrust@hugeego.io",
+  "password": "ooooooo"
 }
 
-#POST http://localhost:8080/api/chirps
-#content-type: application/json
-#
-#{
-#"body": "What about second breakfast?"
-#}
+###
+
+POST http://localhost:8080/api/login
+content-type: application/json
+
+{
+"email": "elongthrust@hugeego.io",
+"password": "ooooooo"
+}
+
+###
+
+POST http://localhost:8080/api/chirps
+content-type: application/json
+
+{
+"body": "What about second breakfast?"
+}
+
+###
+
+POST http://localhost:8080/api/users
+content-type: application/json
+
+{
+  "email": "saul@bettercall.com",
+  "password": "123456"
+}
+
+###
+POST http://localhost:8080/api/login
+content-type: application/json
+
+{
+  "email": "saul@bettercall.com",
+  "password": "123456"
+}
+
+###
