@@ -6,6 +6,11 @@ import (
 	"net/http"
 )
 
+type apiConfig struct {
+	fileServerHits int
+	jwtSecret      string
+}
+
 func (cfg *apiConfig) middlewareGetHits(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		cfg.fileServerHits++

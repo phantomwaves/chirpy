@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
@@ -16,12 +17,19 @@ func main() {
 		log.Println("Debug mode enabled -- removing database.json")
 		err := os.Remove("database.json")
 		if err != nil {
-			log.Fatalf("Error removing existing database", err)
+			log.Fatal("Error removing existing database", err)
 		}
 	}
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	mux := http.NewServeMux()
 	fs := http.FileServer(http.Dir("."))
-	apiCfg := apiConfig{}
+	apiCfg := apiConfig{
+		jwtSecret: os.Getenv("JWT_KEY"),
+	}
 
 	db, _ := ensureDB()
 
@@ -33,6 +41,7 @@ func main() {
 	mux.HandleFunc("GET /api/chirps", apiCfg.getChirpsHandler(db))
 	mux.HandleFunc("GET /api/chirps/{ID}", apiCfg.getChirpByIDHandler(db))
 	mux.HandleFunc("POST /api/users", apiCfg.newUserHandler(db))
+	mux.HandleFunc("PUT /api/users", apiCfg.updateUserHandler(db))
 	mux.HandleFunc("POST /api/login", apiCfg.loginHandler(db))
 
 	server := &http.Server{

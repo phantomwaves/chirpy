@@ -1,6 +1,7 @@
 out
 assets/
 .idea/
+.env
 test.http
 database.json
 main_test.gobak

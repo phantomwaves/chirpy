@@ -7,10 +7,6 @@ import (
 	"strconv"
 )
 
-type apiConfig struct {
-	fileServerHits int
-}
-
 type returnVals struct {
 	Error       string `json:"error"`
 	Valid       bool   `json:"valid"`

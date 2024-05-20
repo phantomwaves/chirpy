@@ -87,3 +87,14 @@ content-type: application/json
 }
 
 ###
+
+PUT http://localhost:8080/api/users
+content-type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJc3N1ZXIiOiJjaGlycHkiLCJTdWJqZWN0IjoiMSIsIklzc3VlZEF0IjoxNzE2MjIwNDI0LCJFeHBpcmVzQXQiOjE3MTYzMDY4MjR9.pq23JsrWFbzf2PwpzTpEIHsvkPwxU5BoHUbTpPn814A
+
+{
+  "email": "mike@bettercall.com",
+  "password": "654321"
+}
+
+###

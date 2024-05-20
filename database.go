@@ -21,9 +21,11 @@ type Chirp struct {
 }
 
 type parameters struct {
-	Body     string `json:"body"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Body             string `json:"body"`
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	Token            string `json:"token"`
+	ExpiresInSeconds int    `json:"expires_in_seconds"`
 }
 
 type DBStructure struct {
@@ -162,4 +164,17 @@ func (dbs *DBStructure) checkEmail(email string) (int, error) {
 		}
 	}
 	return 0, errors.New("email not in use")
+}
+
+func (dbs *DBStructure) updateUser(email, password string, id int) {
+	hp, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Error generating password hash: %v", err)
+	}
+	u := User{
+		Id:       id,
+		Email:    email,
+		Password: string(hp),
+	}
+	dbs.Users[id] = u
 }
